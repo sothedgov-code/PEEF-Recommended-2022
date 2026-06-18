@@ -124,12 +124,26 @@
 <script>
 let data = [];
 
-fetch('data.csv')
+fetch('dataa.csv')
   .then(response => response.text())
   .then(text => {
-    const lines = text.trim().split('\n');
+
+    text = text.replace(/^\uFEFF/, '');
+
+    const lines = text.trim().split(/\r?\n/);
 
     for (let i = 1; i < lines.length; i++) {
+
+      if (!lines[i].trim()) continue;
+
+      const delimiter = lines[i].includes('\t') ? '\t' : ',';
+
+      const cols = lines[i]
+        .split(delimiter)
+        .map(v => v.replace(/^"|"$/g, '').trim());
+
+      if (cols.length < 7) continue;
+
       const [
         serial,
         name,
@@ -138,7 +152,7 @@ fetch('data.csv')
         domicile,
         region,
         year
-      ] = lines[i].split(',').map(v => v.trim());
+      ] = cols;
 
       data.push({
         serial,
@@ -150,8 +164,10 @@ fetch('data.csv')
         year
       });
     }
-  });
 
+    console.log("Records loaded:", data.length);
+  })
+  .catch(err => console.error(err));
 const searchInput = document.getElementById('searchInput');
 const suggestions = document.getElementById('suggestions');
 const table = document.getElementById('dataTable');
@@ -206,30 +222,33 @@ searchInput.addEventListener('input', function () {
 
 searchInput.addEventListener('keydown', function(e){
 
+  if (suggestions.style.display === 'none') return;
+
   const items = suggestions.querySelectorAll('div');
 
   if (!items.length) return;
 
-  switch(e.key){
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    selectedIndex = (selectedIndex + 1) % items.length;
+    updateActive(items);
+  }
 
-    case 'ArrowDown':
-      e.preventDefault();
-      selectedIndex = (selectedIndex + 1) % items.length;
-      updateActive(items);
-      break;
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+    updateActive(items);
+  }
 
-    case 'ArrowUp':
-      e.preventDefault();
-      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-      updateActive(items);
-      break;
+  if (e.key === 'Enter') {
+    e.preventDefault();
 
-    case 'Enter':
-      e.preventDefault();
-      if(selectedIndex >= 0){
-        showRecord(currentMatches[selectedIndex]);
-      }
-      break;
+    if (
+      selectedIndex >= 0 &&
+      selectedIndex < currentMatches.length
+    ) {
+      showRecord(currentMatches[selectedIndex]);
+    }
   }
 });
   
